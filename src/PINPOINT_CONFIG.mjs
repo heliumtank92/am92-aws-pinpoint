@@ -1,0 +1,76 @@
+const {
+  PINPOINT_API_VERSION = '2016-12-01',
+  PINPOINT_REGION = 'ap-south-1',
+
+  PINPOINT_ENABLED = 'false',
+  PINPOINT_APPLICATION_ID = '',
+
+  PINPOINT_SMS_ORIGINATION_NUMBER = '',
+  PINPOINT_SMS_SENDER_ID = '',
+
+  PINPOINT_EMAIL_FROM_ADDRESS = '',
+
+  PINPOINT_OTP_BRAND_NAME = '',
+  PINPOINT_OTP_ORIGINATION_IDENTITY = '',
+  PINPOINT_OTP_ALLOWED_ATTEMPTS = '3',
+  PINPOINT_OTP_CODE_LENGTH = '6',
+  PINPOINT_OTP_VALIDITY_PERIOD_IN_MIN = '5'
+} = process.env
+
+const ENABLED = PINPOINT_ENABLED === 'true'
+
+let REQUIRED_CONFIG = []
+
+if (ENABLED) {
+  REQUIRED_CONFIG = REQUIRED_CONFIG.concat(['PINPOINT_APPLICATION_ID'])
+}
+
+// Terminate Server if any KMS Configuration is missing
+REQUIRED_CONFIG.forEach(function (key) {
+  if (!process.env[key]) {
+    console.error('[Error] Missing Pinpoint Config:', key)
+    return process.exit(1)
+  }
+})
+
+const OTP_ALLOWED_ATTEMPTS = parseInt(PINPOINT_OTP_ALLOWED_ATTEMPTS, 10)
+const OTP_CODE_LENGTH = parseInt(PINPOINT_OTP_CODE_LENGTH, 10)
+const OTP_VALIDITY_PERIOD = parseInt(PINPOINT_OTP_VALIDITY_PERIOD_IN_MIN, 10)
+
+if (isNaN(OTP_ALLOWED_ATTEMPTS)) {
+  console.log('[Error] Invalid Number for Pinpoint Config: PINPOINT_OTP_ALLOWED_ATTEMPTS')
+  process.exit(1)
+}
+
+if (isNaN(OTP_CODE_LENGTH)) {
+  console.log('[Error] Invalid Number for Pinpoint Config: PINPOINT_OTP_CODE_LENGTH')
+  process.exit(1)
+}
+
+if (isNaN(OTP_VALIDITY_PERIOD)) {
+  console.log('[Error] Invalid Number for Pinpoint Config: PINPOINT_OTP_VALIDITY_PERIOD_IN_MIN')
+  process.exit(1)
+}
+
+const CONNECTION_CONFIG = {
+  region: PINPOINT_REGION,
+  apiVersion: PINPOINT_API_VERSION
+}
+
+const PINPOINT_CONFIG = {
+  CONNECTION_CONFIG,
+  APPLICATION_ID: PINPOINT_APPLICATION_ID,
+
+  SMS_ORIGINATION_NUMBER: PINPOINT_SMS_ORIGINATION_NUMBER,
+  SMS_SENDER_ID: PINPOINT_SMS_SENDER_ID,
+
+  EMAIL_FROM_ADDRESS: PINPOINT_EMAIL_FROM_ADDRESS,
+
+  OTP_BRAND_NAME: PINPOINT_OTP_BRAND_NAME,
+  OTP_ORIGINATION_IDENTITY: PINPOINT_OTP_ORIGINATION_IDENTITY,
+  OTP_ALLOWED_ATTEMPTS,
+  OTP_CODE_LENGTH,
+  OTP_VALIDITY_PERIOD
+}
+
+export default PINPOINT_CONFIG
