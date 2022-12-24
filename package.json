@@ -1,0 +1,45 @@
+{
+  "name": "@am92/aws-pinpoint",
+  "version": "1.0.0",
+  "description": "AWS Pinpoint SDK",
+  "type": "module",
+  "main": "src/index.mjs",
+  "scripts": {
+    "preinstall": "npx only-allow pnpm",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": "git@github.com:heliumtank92/am92-aws-pinpoint.git",
+  "homepage": "https://github.com/heliumtank92/am92-aws-pinpoint#readme",
+  "contributors": [
+    {
+      "name": "Ankit Gandhi",
+      "email": "ankitgandhi452@gmail.com",
+      "url": "https://github.com/ankitgandhi452"
+    },
+    {
+      "name": "Mehul Agarwal",
+      "email": "agarwalmehul92@gmail.com",
+      "url": "https://github.com/agarwalmehul"
+    }
+  ],
+  "license": "MIT",
+  "exports": {
+    ".": "./src/PinpointSdk.mjs"
+  },
+  "dependencies": {
+    "@aws-sdk/client-pinpoint": "^3.216.0"
+  },
+  "devDependencies": {
+    "@babel/preset-env": "^7.20.2",
+    "jest": "^29.3.1"
+  },
+  "keywords": [
+    "aws",
+    "aws pinpoint",
+    "sms",
+    "email",
+    "otp",
+    "sns",
+    "ses"
+  ]
+}
