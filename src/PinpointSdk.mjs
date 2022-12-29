@@ -7,7 +7,7 @@ import {
   GetSmsTemplateCommand
 } from '@aws-sdk/client-pinpoint'
 
-import PINPOINT_CONFIG from './PINPOINT_CONFIG.mjs'
+import CONFIG from './CONFIG.mjs'
 import PinpointError from './PinpointError.mjs'
 import templatize from './helpers/templatize.js'
 
@@ -25,7 +25,7 @@ const {
   OTP_ALLOWED_ATTEMPTS: PINPOINT_OTP_ALLOWED_ATTEMPTS,
   OTP_CODE_LENGTH: PINPOINT_OTP_CODE_LENGTH,
   OTP_VALIDITY_PERIOD: PINPOINT_OTP_VALIDITY_PERIOD
-} = PINPOINT_CONFIG
+} = CONFIG
 
 export default class PinpointSdk {
   constructor (config = {}) {
