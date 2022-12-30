@@ -1,6 +1,6 @@
 {
   "name": "@am92/aws-pinpoint",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "AWS Pinpoint SDK",
   "type": "module",
   "main": "src/PinpointSdk.mjs",
@@ -27,7 +27,7 @@
     ".": "./src/PinpointSdk.mjs"
   },
   "dependencies": {
-    "@aws-sdk/client-pinpoint": "^3.216.0"
+    "@aws-sdk/client-pinpoint": "^3.241.0"
   },
   "devDependencies": {
     "@babel/preset-env": "^7.20.2",
