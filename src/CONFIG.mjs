@@ -19,36 +19,42 @@ const {
 
 const ENABLED = PINPOINT_ENABLED === 'true'
 
-let REQUIRED_CONFIG = []
-
-if (ENABLED) {
-  REQUIRED_CONFIG = REQUIRED_CONFIG.concat(['PINPOINT_APPLICATION_ID'])
+const REQUIRED_CONFIG = []
+const MISSING_CONFIGS = []
+const INVALID_CONFIGS = []
+const INT_CONFIGS = {
+  PINPOINT_OTP_ALLOWED_ATTEMPTS,
+  PINPOINT_OTP_CODE_LENGTH,
+  PINPOINT_OTP_VALIDITY_PERIOD_IN_MIN
 }
 
-// Terminate Server if any KMS Configuration is missing
+if (ENABLED) {
+  REQUIRED_CONFIG.puish('PINPOINT_APPLICATION_ID')
+}
+
 REQUIRED_CONFIG.forEach(function (key) {
   if (!process.env[key]) {
-    console.error('[Error] Missing Pinpoint Config:', key)
-    return process.exit(1)
+    MISSING_CONFIGS.push(key)
   }
 })
 
-const OTP_ALLOWED_ATTEMPTS = parseInt(PINPOINT_OTP_ALLOWED_ATTEMPTS, 10)
-const OTP_CODE_LENGTH = parseInt(PINPOINT_OTP_CODE_LENGTH, 10)
-const OTP_VALIDITY_PERIOD = parseInt(PINPOINT_OTP_VALIDITY_PERIOD_IN_MIN, 10)
-
-if (isNaN(OTP_ALLOWED_ATTEMPTS)) {
-  console.log('[Error] Invalid Number for Pinpoint Config: PINPOINT_OTP_ALLOWED_ATTEMPTS')
+if (MISSING_CONFIGS.length) {
+  console.error(`Missing Pinpoint Configs: ${MISSING_CONFIGS}`)
   process.exit(1)
 }
 
-if (isNaN(OTP_CODE_LENGTH)) {
-  console.log('[Error] Invalid Number for Pinpoint Config: PINPOINT_OTP_CODE_LENGTH')
-  process.exit(1)
-}
+// Handle Invalid Configs
+Object.keys(INT_CONFIGS).forEach(key => {
+  const value = INT_CONFIGS[key]
+  INT_CONFIGS[key] = parseInt(value, 10)
 
-if (isNaN(OTP_VALIDITY_PERIOD)) {
-  console.log('[Error] Invalid Number for Pinpoint Config: PINPOINT_OTP_VALIDITY_PERIOD_IN_MIN')
+  if (isNaN(INT_CONFIGS[key])) {
+    INVALID_CONFIGS.push(`Invalid Pinpoint Config ${key}. Must be a valid Number: ${value}`)
+  }
+})
+
+if (INVALID_CONFIGS.length) {
+  INVALID_CONFIGS.map(console.error)
   process.exit(1)
 }
 
@@ -68,9 +74,9 @@ const CONFIG = {
 
   OTP_BRAND_NAME: PINPOINT_OTP_BRAND_NAME,
   OTP_ORIGINATION_IDENTITY: PINPOINT_OTP_ORIGINATION_IDENTITY,
-  OTP_ALLOWED_ATTEMPTS,
-  OTP_CODE_LENGTH,
-  OTP_VALIDITY_PERIOD
+  OTP_ALLOWED_ATTEMPTS: INT_CONFIGS[PINPOINT_OTP_ALLOWED_ATTEMPTS],
+  OTP_CODE_LENGTH: INT_CONFIGS[PINPOINT_OTP_CODE_LENGTH],
+  OTP_VALIDITY_PERIOD: INT_CONFIGS[PINPOINT_OTP_VALIDITY_PERIOD_IN_MIN]
 }
 
 export default CONFIG
