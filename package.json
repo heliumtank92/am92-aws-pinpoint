@@ -1,9 +1,9 @@
 {
   "name": "@am92/aws-pinpoint",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "AWS Pinpoint SDK",
   "type": "module",
-  "main": "src/index.mjs",
+  "main": "src/PinpointSdk.mjs",
   "scripts": {
     "preinstall": "npx only-allow pnpm",
     "test": "echo \"Error: no test specified\" && exit 1"
