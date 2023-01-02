@@ -1,5 +1,6 @@
 # Node artifact files
 node_modules/
+.npm
 
 # Log files
 *.log
@@ -11,5 +12,8 @@ node_modules/
 Thumbs.db
 
 # Tests
-tests/
 coverage/
+profile/
+reports/
+tests/
+jest.config.js
