@@ -1,7 +1,7 @@
 import { expect, describe } from '@jest/globals'
 import testIf from './testif.js'
 
-import PinpointSdk from '../src/PinpointSdk.mjs'
+import PinpointSdk from '../dist/PinpointSdk.js'
 
 const pinpointSdk = new PinpointSdk()
 
