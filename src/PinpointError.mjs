@@ -1,29 +1,39 @@
-export default class PinpointError {
-  constructor (error) {
+import { SERVICE } from './CONFIG.mjs'
+
+const DEFAULT_ERROR_MSG = 'Aws Pinpoint Error'
+const DEFAULT_ERROR_STATUS_CODE = 500
+const DEFAULT_ERROR_CODE = 'AWS_PINPOINT_ERROR'
+
+export default class PinpointError extends Error {
+  constructor (e = {}, eMap) {
+    if (e._isCustomError && !eMap) { return e }
+
+    super()
+
+    const { message, statusCode, errorCode } = eMap || {}
     const {
-      _isPinpointError = false,
-      message = '',
+      message: eMessage,
       $metadata: {
-        httpStatusCode = 500,
+        httpStatusCode: eStatusCode = 500,
         cfId,
         extendedRequestId,
         requestId
       } = {}
-    } = error
+    } = e
 
-    if (_isPinpointError) { return error }
-
-    const err = { cfId, extendedRequestId, requestId }
-    const errHasKeys = !!Object.keys(err).length
-
+    this._isCustomError = true
     this._isPinpointError = true
-    this.message = message
-    this.statusCode = httpStatusCode
-    this.error = (errHasKeys && err) || undefined
-  }
-
-  toJSON () {
-    const { message, statusCode, error } = this
-    return { message, statusCode, error }
+    this.service = SERVICE
+    this.message = message || eMessage || DEFAULT_ERROR_MSG
+    this.statusCode = statusCode || eStatusCode || DEFAULT_ERROR_STATUS_CODE
+    this.errorCode = errorCode || DEFAULT_ERROR_CODE
+    this.error = {
+      ...e,
+      message: eMessage || this.message,
+      errorCode: this.errorCode,
+      cfId,
+      extendedRequestId,
+      requestId
+    }
   }
 }
