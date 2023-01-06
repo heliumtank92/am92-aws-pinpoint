@@ -1,4 +1,7 @@
 const {
+  npm_package_name: pkgName = '',
+  npm_package_version: pkgVersion = '',
+
   PINPOINT_API_VERSION = '2016-12-01',
   PINPOINT_REGION = 'ap-south-1',
 
@@ -17,16 +20,19 @@ const {
   PINPOINT_OTP_VALIDITY_PERIOD_IN_MIN = '5'
 } = process.env
 
+const SERVICE = `${pkgName}@${pkgVersion}`
+const logFunc = console.fatal || console.error
+
 const ENABLED = PINPOINT_ENABLED === 'true'
 
 const REQUIRED_CONFIG = []
 const MISSING_CONFIGS = []
-const INVALID_CONFIGS = []
 const INT_CONFIGS = {
   PINPOINT_OTP_ALLOWED_ATTEMPTS,
   PINPOINT_OTP_CODE_LENGTH,
   PINPOINT_OTP_VALIDITY_PERIOD_IN_MIN
 }
+const INVALID_INT_CONFIG = {}
 
 if (ENABLED) {
   REQUIRED_CONFIG.push('PINPOINT_APPLICATION_ID')
@@ -39,7 +45,7 @@ REQUIRED_CONFIG.forEach(function (key) {
 })
 
 if (MISSING_CONFIGS.length) {
-  console.error(`Missing Pinpoint Configs: ${MISSING_CONFIGS}`)
+  logFunc(`[${SERVICE} AwsPinpoint] AwsPinpoint Config Missing: ${MISSING_CONFIGS.join(', ')}`)
   process.exit(1)
 }
 
@@ -49,12 +55,12 @@ Object.keys(INT_CONFIGS).forEach(key => {
   INT_CONFIGS[key] = parseInt(value, 10)
 
   if (isNaN(INT_CONFIGS[key])) {
-    INVALID_CONFIGS.push(`Invalid Pinpoint Config ${key}. Must be a valid Number: ${value}`)
+    INVALID_INT_CONFIG[key] = value
   }
 })
 
-if (INVALID_CONFIGS.length) {
-  INVALID_CONFIGS.map(console.error)
+if (Object.keys(INVALID_INT_CONFIG).length) {
+  logFunc(`[${SERVICE} AwsPinpoint] Invalid AwsPinpoint Integer Configs:`, INVALID_INT_CONFIG)
   process.exit(1)
 }
 
@@ -74,17 +80,11 @@ const CONFIG = {
 
   OTP_BRAND_NAME: PINPOINT_OTP_BRAND_NAME,
   OTP_ORIGINATION_IDENTITY: PINPOINT_OTP_ORIGINATION_IDENTITY,
-  OTP_ALLOWED_ATTEMPTS: INT_CONFIGS[PINPOINT_OTP_ALLOWED_ATTEMPTS],
-  OTP_CODE_LENGTH: INT_CONFIGS[PINPOINT_OTP_CODE_LENGTH],
-  OTP_VALIDITY_PERIOD: INT_CONFIGS[PINPOINT_OTP_VALIDITY_PERIOD_IN_MIN]
+  OTP_ALLOWED_ATTEMPTS: INT_CONFIGS.PINPOINT_OTP_ALLOWED_ATTEMPTS,
+  OTP_CODE_LENGTH: INT_CONFIGS.PINPOINT_OTP_CODE_LENGTH,
+  OTP_VALIDITY_PERIOD: INT_CONFIGS.PINPOINT_OTP_VALIDITY_PERIOD_IN_MIN
 }
 
 export default CONFIG
-
-const {
-  npm_package_name: pkgName = '',
-  npm_package_version: pkgVersion = ''
-} = process.env
-const SERVICE = `${pkgName}@${pkgVersion}`
 
 export { SERVICE }
