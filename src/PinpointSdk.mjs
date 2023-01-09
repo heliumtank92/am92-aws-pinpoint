@@ -9,228 +9,217 @@ import {
 
 import CONFIG from './CONFIG.mjs'
 import PinpointError from './PinpointError.mjs'
-import templatize from './helpers/templatize.js'
+import templatize from './lib/templatize.js'
 
-const {
-  CONNECTION_CONFIG: PINPOINT_CONNECTION_CONFIG,
-  APPLICATION_ID: PINPOINT_APPLICATION_ID,
-
-  SMS_ORIGINATION_NUMBER: PINPOINT_SMS_ORIGINATION_NUMBER,
-  SMS_SENDER_ID: PINPOINT_SMS_SENDER_ID,
-
-  EMAIL_FROM_ADDRESS: PINPOINT_EMAIL_FROM_ADDRESS,
-
-  OTP_BRAND_NAME: PINPOINT_OTP_BRAND_NAME,
-  OTP_ORIGINATION_IDENTITY: PINPOINT_OTP_ORIGINATION_IDENTITY,
-  OTP_ALLOWED_ATTEMPTS: PINPOINT_OTP_ALLOWED_ATTEMPTS,
-  OTP_CODE_LENGTH: PINPOINT_OTP_CODE_LENGTH,
-  OTP_VALIDITY_PERIOD: PINPOINT_OTP_VALIDITY_PERIOD
-} = CONFIG
+import {
+  SEND_MESSAGE_ERROR,
+  SEND_EMAIL_ERROR,
+  SEND_SMS_ERROR,
+  GET_EMAIL_TEMPLATE_ERROR,
+  GET_SMS_TEMPLATE_ERROR
+} from './ERRORS.mjs'
 
 export default class PinpointSdk {
   constructor (config = {}) {
-    const {
-      CONNECTION_CONFIG = PINPOINT_CONNECTION_CONFIG,
-      APPLICATION_ID = PINPOINT_APPLICATION_ID,
-
-      SMS_ORIGINATION_NUMBER = PINPOINT_SMS_ORIGINATION_NUMBER,
-      SMS_SENDER_ID = PINPOINT_SMS_SENDER_ID,
-
-      EMAIL_FROM_ADDRESS = PINPOINT_EMAIL_FROM_ADDRESS,
-
-      OTP_BRAND_NAME = PINPOINT_OTP_BRAND_NAME,
-      OTP_ORIGINATION_IDENTITY = PINPOINT_OTP_ORIGINATION_IDENTITY,
-      OTP_ALLOWED_ATTEMPTS = PINPOINT_OTP_ALLOWED_ATTEMPTS,
-      OTP_CODE_LENGTH = PINPOINT_OTP_CODE_LENGTH,
-      OTP_VALIDITY_PERIOD = PINPOINT_OTP_VALIDITY_PERIOD
-    } = config
+    this.config = { ...CONFIG, ...config }
+    const { CONNECTION_CONFIG, APPLICATION_ID } = this.config
 
     this.client = new PinpointClient(CONNECTION_CONFIG)
     this.ApplicationId = APPLICATION_ID
 
-    this.SmsOriginationNumber = SMS_ORIGINATION_NUMBER
-    this.SmsSenderId = SMS_SENDER_ID
-
-    this.EmailFromAddress = EMAIL_FROM_ADDRESS
-
-    this.OtpBrandName = OTP_BRAND_NAME
-    this.OtpOriginationIdentity = OTP_ORIGINATION_IDENTITY
-    this.OtpAllowedAttempts = OTP_ALLOWED_ATTEMPTS
-    this.OtpCodeLength = OTP_CODE_LENGTH
-    this.OtpValidityPeriod = OTP_VALIDITY_PERIOD
-
     // Method Hard-binding
     this.sendMessages = this.sendMessages.bind(this)
-    this.sendSms = this.sendSms.bind(this)
     this.sendEmail = this.sendEmail.bind(this)
+    this.sendSms = this.sendSms.bind(this)
     this.sendOTP = this.sendOTP.bind(this)
     this.verifyOTP = this.verifyOTP.bind(this)
-    this.getEmailTemplate = this.getEmailTemplate.bind(this)
-    this.getSmsTemplate = this.getSmsTemplate.bind(this)
-    this.sendTemplatizedEmail = this.sendTemplatizedEmail.bind(this)
-    this.sendTemplatizedEmail = this.sendTemplatizedEmail.bind(this)
   }
 
   async sendMessages (attrs = {}) {
     try {
-      const { client, ApplicationId } = this
-      const { MessageRequest } = attrs
-
-      const params = { ApplicationId, MessageRequest }
-      const command = new SendMessagesCommand(params)
-      const response = await client.send(command)
-
-      const { MessageResponse } = response
-      return MessageResponse
+      this.#_sendMessages(attrs)
     } catch (error) {
-      const err = new PinpointError(error)
+      const err = new PinpointError(error, SEND_MESSAGE_ERROR)
       throw err
     }
   }
 
-  async sendSms (attrs = {}) {
-    const { SmsOriginationNumber, SmsSenderId } = this
+  async sendEmail (attrs = {}) {
+    const { EMAIL_FROM_ADDRESS } = this.config
+    const ChannelType = 'EMAIL'
     const {
-      Body,
-      Keyword,
-      MessageType,
-      OriginationNumber = SmsOriginationNumber,
-      SenderId = SmsSenderId,
-      DestinationNumber = '',
-      DestinationNumbers = [],
-      Substitutions,
-      TemplateName,
-      TemplateId
+      body,
+      feedbackForwardingAddress,
+      fromAddress = EMAIL_FROM_ADDRESS,
+      rawEmail,
+      simpleEmail = {},
+      replyToAddresses,
+      toAddresses = [],
+      emailTemplateName,
+      emailTemplateVersion,
+      substitutions = {}
     } = attrs
 
-    const Addresses = (DestinationNumber && {
-      [DestinationNumber]: { ChannelType: 'SMS' }
-    }) || DestinationNumbers.reduce((addresses, DestinationNumber) => {
-      addresses[DestinationNumber] = { ChannelType: 'SMS' }
+    // Handle Addresses
+    const Addresses = toAddresses.reduce((addresses, ToAddress) => {
+      addresses[ToAddress] = { ChannelType }
       return addresses
     }, {})
 
-    const MessageRequest = {
-      MessageConfiguration: {
-        SMSMessage: {
-          Body,
-          Keyword,
-          MessageType,
-          OriginationNumber,
-          SenderId,
-          Substitutions,
-          TemplateId
-        }
-      },
-      Addresses,
-      TemplateConfiguration: TemplateName
-        ? {
-            SMSTemplate: { Name: TemplateName }
-          }
-        : undefined
+    // Handle SimpleEmail if Template Provided
+    let SimpleEmail
+    if (emailTemplateName && emailTemplateVersion) {
+      // Get Template
+      const template = await this.#_getEmailTemplate(attrs)
+      const { DefaultSubstitutions = '', TextPart = '', HtmlPart = '', Subject = '' } = template
+
+      // Perform Subsitutions
+      const DefaultSubstitutionsObj = (DefaultSubstitutions && JSON.parse(DefaultSubstitutions)) || {}
+      const Substitutions = { ...DefaultSubstitutionsObj, ...substitutions }
+
+      // Build SimpleEmail
+      SimpleEmail = {
+        Subject: { Data: templatize(Subject, Substitutions) },
+        TextPart: { Data: templatize(TextPart, Substitutions) },
+        HtmlPart: { Data: templatize(HtmlPart, Substitutions) }
+      }
+    } else {
+      SimpleEmail = {
+        Subject: { Data: simpleEmail.subject?.data || '' },
+        TextPart: { Data: simpleEmail.textPart?.data || '' },
+        HtmlPart: { Data: simpleEmail.htmlPart?.data || '' }
+      }
     }
 
-    const messageAttrs = { MessageRequest }
-    const MessageResponse = await this.sendMessages(messageAttrs)
+    // Build MessageRequest
+    const MessageRequest = {
+      MessageConfiguration: {
+        EmailMessage: {
+          body,
+          FeedbackForwardingAddress: feedbackForwardingAddress || undefined,
+          FromAddress: fromAddress,
+          RawEmail: rawEmail,
+          ReplyToAddresses: replyToAddresses,
+          SimpleEmail
+        }
+      },
+      Addresses
+    }
 
-    const { Result, ...restProps } = MessageResponse
-    const DestinationNumberResult = Result[DestinationNumber] || {}
-    const data = { ...restProps, Channel: 'SMS', DestinationNumber, Result: DestinationNumberResult }
+    try {
+      // Send Email
+      const messageAttrs = { MessageRequest }
+      const MessageResponse = await this.#_sendMessages(messageAttrs)
 
-    return data
+      // Build Response Data
+      const { RequestId, Result } = MessageResponse
+      const results = _buildResults(RequestId, Result, ChannelType)
+      return { results }
+    } catch (error) {
+      console.log(error)
+      throw new PinpointError(error, SEND_EMAIL_ERROR)
+    }
   }
 
-  async sendEmail (attrs = {}) {
-    const { EmailFromAddress } = this
+  async sendSms (attrs = {}) {
+    const { SMS_ORIGINATION_NUMBER, SMS_SENDER_ID } = this.config
+    const ChannelType = 'SMS'
     const {
-      Body,
-      FeedbackForwardingAddress,
-      FromAddress = EmailFromAddress,
-      RawEmail,
-      ReplyToAddresses,
-      SimpleEmail,
-      ToAddress = '',
-      ToAddresses = [],
-      Substitutions,
-      TemplateName
+      body = '',
+      keyword,
+      messageType,
+      originationNumber = SMS_ORIGINATION_NUMBER,
+      senderId = SMS_SENDER_ID,
+      destinationNumbers = [],
+      smsTemplateName,
+      smsTemplateVersion,
+      substitutions = {}
     } = attrs
 
-    const Addresses = (ToAddress && {
-      [ToAddress]: { ChannelType: 'EMAIL' }
-    }) || ToAddresses.reduce((addresses, ToAddress) => {
-      addresses[ToAddress] = { ChannelType: 'EMAIL' }
+    // Handle Addresses
+    const Addresses = destinationNumbers.reduce((addresses, DestinationNumber) => {
+      addresses[DestinationNumber] = { ChannelType }
       return addresses
     }, {})
 
+    // Handle SimpleEmail if Template Provided
+    let Body = body
+    if (smsTemplateName && smsTemplateVersion) {
+      // Get Template
+      const template = await this.#_getSmsTemplate(attrs)
+      const { DefaultSubstitutions = '', Body: TemplateBody = '' } = template
+
+      // Perform Subsitutions
+      const DefaultSubstitutionsObj = (DefaultSubstitutions && JSON.parse(DefaultSubstitutions)) || {}
+      const Substitutions = { ...DefaultSubstitutionsObj, ...substitutions }
+      Body = templatize(TemplateBody, Substitutions)
+    }
+
+    // Build MessageRequest
     const MessageRequest = {
       MessageConfiguration: {
         EmailMessage: {
           Body,
-          FeedbackForwardingAddress,
-          FromAddress,
-          RawEmail,
-          ReplyToAddresses,
-          SimpleEmail,
-          Substitutions
+          Keyword: keyword,
+          MessageType: messageType,
+          OriginationNumber: originationNumber,
+          SenderId: senderId
         }
       },
-      Addresses,
-      TemplateConfiguration: TemplateName
-        ? {
-            EmailTemplate: { Name: TemplateName }
-          }
-        : undefined
+      Addresses
     }
 
-    const messageAttrs = { MessageRequest }
-    const MessageResponse = await this.sendMessages(messageAttrs)
+    try {
+      // Send SMS
+      const messageAttrs = { MessageRequest }
+      const MessageResponse = await this.#_sendMessages(messageAttrs)
 
-    const { Result, ...restProps } = MessageResponse
-    const ToAddressResult = Result[ToAddress] || {}
-    const data = { ...restProps, Channel: 'EMAIL', ToAddress, Result: ToAddressResult }
-
-    return data
+      // Build Response Data
+      const { RequestId, Result } = MessageResponse
+      const results = _buildResults(RequestId, Result, ChannelType)
+      return { results }
+    } catch (error) {
+      throw new PinpointError(error, SEND_SMS_ERROR)
+    }
   }
 
   async sendOTP (attrs = {}) {
+    const { client, ApplicationId } = this
     const {
-      client,
-      ApplicationId,
-
-      OtpBrandName,
-      OtpOriginationIdentity,
-      OtpAllowedAttempts,
-      OtpCodeLength,
-      OtpValidityPeriod
-    } = this
+      OTP_BRAND_NAME,
+      OTP_ORIGINATION_IDENTITY,
+      OTP_ALLOWED_ATTEMPTS,
+      OTP_CODE_LENGTH,
+      OTP_VALIDITY_PERIOD
+    } = this.config
 
     const {
-      BrandName = OtpBrandName,
-      Channel = 'SMS',
-      OriginationIdentity = OtpOriginationIdentity,
-      AllowedAttempts = OtpAllowedAttempts,
-      CodeLength = OtpCodeLength,
-      ValidityPeriod = OtpValidityPeriod,
+      brandName = OTP_BRAND_NAME,
+      channel = 'SMS',
+      originationIdentity = OTP_ORIGINATION_IDENTITY,
+      allowedAttempts = OTP_ALLOWED_ATTEMPTS,
+      codeLength = OTP_CODE_LENGTH,
+      validityPeriod = OTP_VALIDITY_PERIOD,
 
-      DestinationIdentity,
-      ReferenceId,
-      EntityId,
-      Language,
-      TemplateId
+      destinationIdentity,
+      referenceId,
+      entityId,
+      language,
+      templateId
     } = attrs
 
     const SendOTPMessageRequestParameters = {
-      BrandName,
-      Channel,
-      DestinationIdentity,
-      OriginationIdentity,
-      ReferenceId,
-      AllowedAttempts,
-      CodeLength,
-      EntityId,
-      Language,
-      TemplateId,
-      ValidityPeriod
+      BrandName: brandName,
+      Channel: channel,
+      DestinationIdentity: destinationIdentity,
+      OriginationIdentity: originationIdentity,
+      ReferenceId: referenceId,
+      AllowedAttempts: allowedAttempts,
+      CodeLength: codeLength,
+      EntityId: entityId,
+      Language: language,
+      TemplateId: templateId,
+      ValidityPeriod: validityPeriod
     }
 
     const params = { ApplicationId, SendOTPMessageRequestParameters }
@@ -238,125 +227,93 @@ export default class PinpointSdk {
     const response = await client.send(command)
 
     const { MessageResponse } = response
-    const { Result, ...restProps } = MessageResponse
-    const ToAddressResult = Result[DestinationIdentity] || {}
-    const data = { ...restProps, DestinationIdentity, Result: ToAddressResult }
-
-    return data
+    const { RequestId, Result } = MessageResponse
+    const results = _buildResults(RequestId, Result)
+    return { result: results[0] }
   }
 
   async verifyOTP (attrs = {}) {
     const { client, ApplicationId } = this
     const {
-      DestinationIdentity,
-      Otp,
-      ReferenceId
+      destinationIdentity,
+      otp,
+      referenceId
     } = attrs
 
     const VerifyOTPMessageRequestParameters = {
-      DestinationIdentity,
-      Otp,
-      ReferenceId
+      DestinationIdentity: destinationIdentity,
+      Otp: otp,
+      ReferenceId: referenceId
     }
 
     const params = { ApplicationId, VerifyOTPMessageRequestParameters }
     const command = new VerifyOTPMessageCommand(params)
     const response = await client.send(command)
 
-    const { VerificationResponse } = response
-    return VerificationResponse
+    const { VerificationResponse: { Valid } } = response
+    return { valid: Valid }
   }
 
-  async getEmailTemplate (attrs = {}) {
-    const { client } = this
-    const { TemplateName, TemplateVersion } = attrs
+  async #_sendMessages (attrs = {}) {
+    const { client, ApplicationId } = this
+    const { MessageRequest } = attrs
 
-    const params = { TemplateName, Version: TemplateVersion }
-    const command = new GetEmailTemplateCommand(params)
+    const params = { ApplicationId, MessageRequest }
+    const command = new SendMessagesCommand(params)
     const response = await client.send(command)
 
-    const { EmailTemplateResponse } = response
-    return EmailTemplateResponse
+    const { MessageResponse } = response
+    return MessageResponse
   }
 
-  async getSmsTemplate (attrs = {}) {
-    const { client } = this
-    const { TemplateName, TemplateVersion } = attrs
+  async #_getEmailTemplate (attrs = {}) {
+    try {
+      const { client } = this
+      const { emailTemplateName, emailTemplateVersion } = attrs
 
-    const params = { TemplateName, Version: TemplateVersion }
-    const command = new GetSmsTemplateCommand(params)
-    const response = await client.send(command)
+      const params = { TemplateName: emailTemplateName, Version: emailTemplateVersion }
+      const command = new GetEmailTemplateCommand(params)
+      const response = await client.send(command)
 
-    const { SMSTemplateResponse } = response
-    return SMSTemplateResponse
-  }
-
-  async sendTemplatizedEmail (attrs = {}) {
-    const {
-      ToAddress,
-      Substitutions = {},
-      FromAddress,
-      FeedbackForwardingAddress,
-      ReplyToAddresses
-    } = attrs
-
-    // Get Template
-    const template = await this.getEmailTemplate(attrs)
-    const { DefaultSubstitutions = '', TextPart = '', HtmlPart = '', Subject = '' } = template
-
-    // Perform Subsitutions
-    const DefaultSubstitutionsObj = (DefaultSubstitutions && JSON.parse(DefaultSubstitutions)) || {}
-    const substitutions = { ...DefaultSubstitutionsObj, ...Substitutions }
-    const TextPartData = templatize(TextPart, substitutions)
-    const HtmlPartData = templatize(HtmlPart, substitutions)
-    const SubjectData = templatize(Subject, substitutions)
-
-    // Send Email
-    const SimpleEmail = {
-      Subject: { Data: SubjectData },
-      TextPart: { Data: TextPartData },
-      HtmlPart: { Data: HtmlPartData }
+      const { EmailTemplateResponse } = response
+      return EmailTemplateResponse
+    } catch (error) {
+      const err = new PinpointError(error, GET_EMAIL_TEMPLATE_ERROR)
+      throw err
     }
-    const emailAttrs = {
-      ToAddress,
-      SimpleEmail,
-      FromAddress,
-      FeedbackForwardingAddress,
-      ReplyToAddresses
-    }
-    const response = await this.sendEmail(emailAttrs)
-    return response
   }
 
-  async sendTemplatizedSms (attrs = {}) {
-    const {
-      MessageType,
-      DestinationNumber,
-      Substitutions = {},
-      OriginationNumber,
-      Keyword,
-      SenderId
-    } = attrs
+  async #_getSmsTemplate (attrs = {}) {
+    try {
+      const { client } = this
+      const { smsTemplateName, smsTemplateVersion } = attrs
 
-    // Get Template
-    const template = await this.getSmsTemplate(attrs)
-    const { DefaultSubstitutions = '', Body = '' } = template
+      const params = { TemplateName: smsTemplateName, Version: smsTemplateVersion }
+      const command = new GetSmsTemplateCommand(params)
+      const response = await client.send(command)
 
-    // Perform Subsitutions
-    const DefaultSubstitutionsObj = (DefaultSubstitutions && JSON.parse(DefaultSubstitutions)) || {}
-    const substitutions = { ...DefaultSubstitutionsObj, ...Substitutions }
-    const BodyData = templatize(Body, substitutions)
-
-    // Send SMS
-    const smsAttrs = {
-      Body: BodyData,
-      MessageType,
-      DestinationNumber,
-      OriginationNumber,
-      Keyword,
-      SenderId
+      const { SMSTemplateResponse } = response
+      return SMSTemplateResponse
+    } catch (error) {
+      const err = new PinpointError(error, GET_SMS_TEMPLATE_ERROR)
+      throw err
     }
-    const response = await this.sendSms(smsAttrs)
-    return response
   }
+}
+
+function _buildResults (requestId, Result = {}, channelType) {
+  return Object.keys(Result).map(Address => {
+    const AddressResult = Result[Address]
+    const { MessageId, DeliveryStatus, StatusCode, StatusMessage, UpdatedToken } = AddressResult
+    return {
+      requestId,
+      messageId: MessageId,
+      channelType,
+      address: Address,
+      deliveryStatus: DeliveryStatus,
+      statusCode: StatusCode,
+      message: StatusMessage,
+      updatedToken: UpdatedToken
+    }
+  })
 }
