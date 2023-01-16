@@ -18,16 +18,16 @@ export default class PinpointError extends Error {
       } = {}
     } = e
 
+    for (const eKey in e) {
+      this[eKey] = e[eKey]
+    }
+
     this._isCustomError = true
     this._isPinpointError = true
     this.service = SERVICE
     this.message = message || eMessage || DEFAULT_ERROR_MSG
     this.statusCode = statusCode || eStatusCode || DEFAULT_ERROR_STATUS_CODE
     this.errorCode = errorCode || DEFAULT_ERROR_CODE
-    this.error = {
-      ...e,
-      message: eMessage || this.message,
-      errorCode: this.errorCode
-    }
+    this.error = e
   }
 }
