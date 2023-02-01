@@ -158,7 +158,7 @@ export default class PinpointSdk {
     // Build MessageRequest
     const MessageRequest = {
       MessageConfiguration: {
-        EmailMessage: {
+        SMSMessage: {
           Body,
           Keyword: keyword,
           MessageType: messageType,
