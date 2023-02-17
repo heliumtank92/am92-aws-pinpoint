@@ -30,9 +30,8 @@
     ".": "./src/PinpointSdk.mjs"
   },
   "dependencies": {
-    "@aws-sdk/client-pinpoint": "^3.241.0"
+    "@aws-sdk/client-pinpoint": "^3.272.0"
   },
-  "devDependencies": {},
   "keywords": [
     "aws",
     "aws pinpoint",
