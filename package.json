@@ -3,8 +3,8 @@
   "version": "1.0.16",
   "description": "AWS Pinpoint SDK",
   "type": "module",
-  "main": "src/PinpointSdk.mjs",
-  "module": "src/PinpointSdk.mjs",
+  "main": "index.mjs",
+  "module": "index.mjs",
   "scripts": {
     "test": "echo 'Error: no test specified'",
     "preversion": "pnpm test",
@@ -27,7 +27,7 @@
   ],
   "license": "MIT",
   "exports": {
-    ".": "./src/PinpointSdk.mjs"
+    ".": "./index.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-pinpoint": "^3.272.0"
