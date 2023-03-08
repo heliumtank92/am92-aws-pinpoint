@@ -1,6 +1,6 @@
 {
   "name": "@am92/aws-pinpoint",
-  "version": "1.0.18",
+  "version": "1.1.0",
   "description": "AWS Pinpoint SDK",
   "type": "module",
   "exports": {
