@@ -1,0 +1,37 @@
+export default CONFIG;
+declare namespace CONFIG {
+    export { CONNECTION_CONFIG };
+    export { PINPOINT_APPLICATION_ID as APPLICATION_ID };
+    export { PINPOINT_SMS_ORIGINATION_NUMBER as SMS_ORIGINATION_NUMBER };
+    export { PINPOINT_SMS_SENDER_ID as SMS_SENDER_ID };
+    export { PINPOINT_EMAIL_FROM_ADDRESS as EMAIL_FROM_ADDRESS };
+    export { PINPOINT_OTP_BRAND_NAME as OTP_BRAND_NAME };
+    export { PINPOINT_OTP_ORIGINATION_IDENTITY as OTP_ORIGINATION_IDENTITY };
+    import OTP_ALLOWED_ATTEMPTS = INT_CONFIGS.PINPOINT_OTP_ALLOWED_ATTEMPTS;
+    export { OTP_ALLOWED_ATTEMPTS };
+    import OTP_CODE_LENGTH = INT_CONFIGS.PINPOINT_OTP_CODE_LENGTH;
+    export { OTP_CODE_LENGTH };
+    import OTP_VALIDITY_PERIOD = INT_CONFIGS.PINPOINT_OTP_VALIDITY_PERIOD_IN_MIN;
+    export { OTP_VALIDITY_PERIOD };
+}
+export const SERVICE: string;
+declare namespace CONNECTION_CONFIG {
+    export { PINPOINT_REGION as region };
+    export { PINPOINT_API_VERSION as apiVersion };
+}
+declare const PINPOINT_APPLICATION_ID: string;
+declare const PINPOINT_SMS_ORIGINATION_NUMBER: string;
+declare const PINPOINT_SMS_SENDER_ID: string;
+declare const PINPOINT_EMAIL_FROM_ADDRESS: string;
+declare const PINPOINT_OTP_BRAND_NAME: string;
+declare const PINPOINT_OTP_ORIGINATION_IDENTITY: string;
+declare namespace INT_CONFIGS {
+    export { PINPOINT_OTP_ALLOWED_ATTEMPTS };
+    export { PINPOINT_OTP_CODE_LENGTH };
+    export { PINPOINT_OTP_VALIDITY_PERIOD_IN_MIN };
+}
+declare const PINPOINT_REGION: string;
+declare const PINPOINT_API_VERSION: string;
+declare const PINPOINT_OTP_ALLOWED_ATTEMPTS: string;
+declare const PINPOINT_OTP_CODE_LENGTH: string;
+declare const PINPOINT_OTP_VALIDITY_PERIOD_IN_MIN: string;
